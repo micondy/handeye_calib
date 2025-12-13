@@ -22,6 +22,12 @@ def main():
                 "topic": "/right_joint_trajectory_controller/controller_state",
                 "type": "control_msgs/msg/JointTrajectoryControllerState",
             },
+        },
+        topics_to_publish={
+            "joint_commands": {
+                "topic": "/joint_trajectory_controller/joint_trajectory",
+                "type": "forward_command_controller/ForwardCommandController",
+            },
         }
     )
     ros2_robot_interface = ROS2RobotInterface(config)
