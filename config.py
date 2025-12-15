@@ -13,7 +13,7 @@ class ROS2RobotConfig(RobotConfig):
     
     namespace: str    = field(default="")  
 
-    joints: list[str] = field(default_factory=list)
+    joints: dict[str,list] = field(default_factory=dict)
     
     topics_to_subscribe: dict[str, dict] = field(default_factory=dict)
 

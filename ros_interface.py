@@ -22,21 +22,19 @@ from .config import ROS2RobotConfig
 
 # ros_interface.py
 from sensor_msgs.msg import JointState
+from std_msgs.msg import Float64MultiArray
 from control_msgs.msg import JointTrajectoryControllerState
 
 #对照表，订阅要消息类型
 MSG_TYPE_MAP = {
-    "sensor_msgs/JointState": JointState,
+    "sensor_msgs/msg/JointState": JointState,
+    "std_msgs/msg/Float64MultiArray" : Float64MultiArray,
     "control_msgs/msg/JointTrajectoryControllerState" :JointTrajectoryControllerState,
 }
 
 from threading import Lock
-@dataclass(frozen=True)
-class JointStateSnapshot:
-    position: Dict[str, float]
-    velocity: Optional[Dict[str, float]]
-    effort: Optional[Dict[str, float]]
-    stamp: float  # local time.time()
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +47,7 @@ class ROS2RobotInterface:
         self._config = config
         self._connected: bool = False
         self._subscriptions = []
-        self._publishers = []
+        self._publishers = {}
 
         self._executor: SingleThreadedExecutor | None = None
         self._executor_thread: threading.Thread | None = None
@@ -95,7 +93,7 @@ class ROS2RobotInterface:
                     topic_name,
                     10
                 )
-                self._publishers.append(pub)
+                self._publishers[name] = pub
                 logger.info(f"Published to topic: {topic_name} with type {cfg['type']}")
             
             # executor and thread,线程化
@@ -121,27 +119,48 @@ class ROS2RobotInterface:
         with self._cache_lock:
             self._latest_msgs[name] = msg
             self._latest_stamp[name] = now
-        pass
+            #print(self._latest_msgs[name])
 
     def get_joint_state(self) -> Dict[str, Any] | None:
         with self._cache_lock:
-            msg = self._latest_msgs.get("joint_state")
+            msg = self._latest_msgs.get("joint_states")
+        #print(msg)
 
         if msg is None:
             return None
+        joint_state_dict={}
+        for i,name in enumerate(msg.name):
+            joint_state_dict[f"{name}.pos"]=msg.position[i]
+            joint_state_dict[f"{name}.vel"]=msg.velocity[i]
+            joint_state_dict[f"{name}.eff"]=msg.effort[i]
+ 
+        return joint_state_dict
 
-        assert isinstance(msg, JointState)
 
-        return {
-            "position": dict(zip(msg.name, msg.position)),
-            "velocity": dict(zip(msg.name, msg.velocity)) if msg.velocity else None,
-            "effort": dict(zip(msg.name, msg.effort)) if msg.effort else None,
-        }
     def send_joint_commands(self, commands: Dict[str, float]) -> None:
         """
-        发送关节命令
+        发送关节命令，接收到的是 字典，joint1.pos,jonit2.pos，以及对应的值
+        要根据joints={
+        "left_forward_position_controller":["openarm_left_joint1","openarm_left_joint2","openarm_left_joint3","openarm_left_joint4","openarm_left_joint5","openarm_left_joint6","openarm_left_joint7",],
+        "right_forward_position_controller":["openarm_right_joint1","openarm_right_joint2","openarm_right_joint3","openarm_right_joint4","openarm_right_joint5","openarm_right_joint6","openarm_right_joint7",]
+        }
+        发送命令 要按照对应的顺序组成
+        /left_forward_position_controller/commands std_msgs/msg/Float64MultiArray "{data: [0.0, -0.5, 0.3, 0.0, 0.5, -0.2, 0.0]}"
         """
-        pass
+        for controller_name, joint_list in self._config.joints.items():
+        # 按顺序取值
+            data = []
+            for joint_name in joint_list:
+                key = f"{joint_name}.pos"
+                if key not in commands:
+                    raise KeyError(f"{key} not found in commands dict")
+                data.append(commands[key])
+            # 生成消息
+            msg = Float64MultiArray()
+            msg.data = data
+            # 发布
+            self._publishers[controller_name].publish(msg)
+            
     def disconnect(self) -> None:
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
