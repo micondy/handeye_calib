@@ -34,8 +34,6 @@ MSG_TYPE_MAP = {
 
 from threading import Lock
 
-
-
 logger = logging.getLogger(__name__)
 
 class ROS2RobotInterface:
@@ -46,7 +44,7 @@ class ROS2RobotInterface:
         """
         self._config = config
         self._connected: bool = False
-        self._subscriptions = []
+        self._subscriptions = {}
         self._publishers = {}
 
         self._executor: SingleThreadedExecutor | None = None
@@ -82,7 +80,7 @@ class ROS2RobotInterface:
                     lambda msg, n=name: self._generic_callback(n, msg),
                     10
                 )
-                self._subscriptions.append(sub)
+                self._subscriptions[name]=sub
                 logger.info(f"Subscribed to topic: {topic_name} with type {cfg['type']}")
             
             for name, cfg in self._config.topics_to_publish.items():

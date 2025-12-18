@@ -10,7 +10,7 @@ def main():
     config = ROS2RobotConfig(
         robot_name="my_robot",
         joints={
-        "left_forward_position_controller":["openarm_left_joint1","openarm_left_joint2","openarm_left_joint3","openarm_left_joint4","openarm_left_joint5","openarm_left_joint6","openarm_left_joint7",],
+        "left_forward_position_controller": ["openarm_left_joint1","openarm_left_joint2","openarm_left_joint3","openarm_left_joint4","openarm_left_joint5","openarm_left_joint6","openarm_left_joint7",],
         "right_forward_position_controller":["openarm_right_joint1","openarm_right_joint2","openarm_right_joint3","openarm_right_joint4","openarm_right_joint5","openarm_right_joint6","openarm_right_joint7",]
         },
         topics_to_subscribe={
@@ -38,7 +38,7 @@ def main():
         while True:
             time.sleep(0.1)
             # 获取当前关节状态
-            dict1 = ros2_robot_interface.get_joint_state()  # ❌ 注意要加括号
+            dict1 = ros2_robot_interface.get_joint_state()
             if dict1 is None:
                 continue
             # 生成新的命令字典（随机扰动 ±0.1）
