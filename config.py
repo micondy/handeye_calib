@@ -7,18 +7,32 @@ from lerobot.robots import RobotConfig
 @dataclass
 class ROS2RobotConfig(RobotConfig):
     """
-
     """
-    robot_name: str   = field(default="lerobot_ros2_openarm")
+
+    robot_name: str   = field(default="lerobot_ros2_openarm")# 会创建一个 lerobot_ros2_openarm_node 作为节点名称
     
     namespace: str    = field(default="")  
 
+
     joints: dict[str,list] = field(default_factory=dict)
-    
+    """ 
+    "left_forward_position_controller": ["joint1","joint2"...] 
+    """
     topics_to_subscribe: dict[str, dict] = field(default_factory=dict)
+    """
+            "joint_states": {
+                "topic": "/joint_states",
+                "type": "sensor_msgs/msg/JointState",
+            }
 
+    """
     topics_to_publish: dict[str, dict] = field(default_factory=dict)
-
+    """
+            "left_forward_position_controller": {
+                "topic": "/left_forward_position_controller/commands",
+                "type": "std_msgs/msg/Float64MultiArray",
+            },
+    """
 
     cameras: dict[str, CameraConfig] = field(default_factory=dict)
 

@@ -44,15 +44,16 @@ class ROS2RobotInterface:
         """
         self._config = config
         self._connected: bool = False
-        self._subscriptions = {}
-        self._publishers = {}
+        self._subscriptions = {} # [str, Subscription] 话题名和订阅者对象
+        self._publishers = {}    # [str, Publisher] 话题名和发布者对象
+        self._joints_names: List[str] = [] # 关节名称列表
 
         self._executor: SingleThreadedExecutor | None = None
         self._executor_thread: threading.Thread | None = None
         self._robot_node: Node | None = None
 
-        self._cache_lock = Lock()
-        # topic_name -> latest snapshot
+        self._cache_lock = Lock() # 锁
+        # 回调函数缓存的最新消息和时间戳 str是 话题名 存储msg和消息时间
         self._latest_msgs: Dict[str, Any] = {}
         self._latest_stamp: Dict[str, float] = {}
 
@@ -113,6 +114,9 @@ class ROS2RobotInterface:
             raise
     
     def _generic_callback(self, name: str, msg):
+        """
+        根据话题名称缓存最新的消息和时间戳
+        """
         now = time.time()
         with self._cache_lock:
             self._latest_msgs[name] = msg
@@ -123,7 +127,6 @@ class ROS2RobotInterface:
         with self._cache_lock:
             msg = self._latest_msgs.get("joint_states")
         #print(msg)
-
         if msg is None:
             return None
         joint_state_dict={}
