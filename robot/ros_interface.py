@@ -159,6 +159,7 @@ class ROS2RobotInterface:
             # 生成消息
             msg = Float64MultiArray()
             msg.data = data
+            print(f"Sending to {controller_name}: {msg.data}")
             # 发布
             self._publishers[controller_name].publish(msg)
             

@@ -39,6 +39,7 @@ def main():
             time.sleep(0.1)
             # 获取当前关节状态
             dict1 = ros2_robot_interface.get_joint_state()
+            #print(dict1)
             if dict1 is None:
                 continue
             # 生成新的命令字典（随机扰动 ±0.1）
@@ -46,9 +47,10 @@ def main():
             for joint_key, val in cmd_dict.items():
                 if joint_key.endswith(".pos"):
                     cmd_dict[joint_key] = val + random.uniform(-0.1, 0.1)
-
+            #print(cmd_dict)
             # 发送命令
             ros2_robot_interface.send_joint_commands(cmd_dict)
+            time.sleep(0.5)
 
             
     except KeyboardInterrupt:
@@ -56,3 +58,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
