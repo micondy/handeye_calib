@@ -1,4 +1,4 @@
-from .ROS2RobotConfig import ROS2RobotConfig
+from .Ros2RobotConfig import Ros2RobotConfig
 from .ROS2RobotInterface import ROS2RobotInterface
 import time
 import logging
@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 import cv2
 import numpy as np
 def main():
-    config = ROS2RobotConfig(
+    config = Ros2RobotConfig(
         robot_name="my_robot",
         joints={
         "left_forward_position_controller": ["openarm_left_joint1","openarm_left_joint2","openarm_left_joint3","openarm_left_joint4","openarm_left_joint5","openarm_left_joint6","openarm_left_joint7",],
@@ -41,6 +41,18 @@ def main():
             "right_forward_position_controller": {
                 "topic": "/right_forward_position_controller/commands",
                 "type": "std_msgs/msg/Float64MultiArray",
+            },
+        },
+        cameras={
+            "camera_rgb":{
+                "height":480,
+                "width":640,
+                "channels":3,       
+            },
+            "camera_depth":{
+                "height":480,
+                "width":640,
+                "channels":1,
             },
         }
     )

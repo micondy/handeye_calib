@@ -3,7 +3,7 @@
 import torch
 
 
-from lerobot_ros2.config import ROS2RobotConfig
+from lerobot_ros2.config import Ros2RobotConfig
 from lerobot_ros2.openarm import ROS2Robot
 import time
 import logging
@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 
 def main():
     # 配置机器人
-    config = ROS2RobotConfig(
+    config = Ros2RobotConfig(
         robot_name="my_robot",
         joints={
             "left_forward_position_controller": ["openarm_left_joint1", "openarm_left_joint2", "openarm_left_joint3", "openarm_left_joint4", "openarm_left_joint5", "openarm_left_joint6", "openarm_left_joint7"],
@@ -44,6 +44,18 @@ def main():
             "right_forward_position_controller": {
                 "topic": "/right_forward_position_controller/commands",
                 "type": "std_msgs/msg/Float64MultiArray",
+            },
+        },
+        cameras={
+            "camera_rgb":{
+                "height":480,
+                "width":640,
+                "channels":3,
+            },
+            "camera_depth":{
+                "height":480,
+                "width":640,
+                "channels":1,
             },
         }
     )

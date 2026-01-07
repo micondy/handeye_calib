@@ -18,7 +18,7 @@ from rclpy.node import Node
 from rclpy.publisher import Publisher
 from rclpy.subscription import Subscription
 
-from .ROS2RobotConfig import ROS2RobotConfig
+from .Ros2RobotConfig import Ros2RobotConfig
 
 # ros_interface.py
 from sensor_msgs.msg import JointState
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 class ROS2RobotInterface:
     
-    def __init__(self, config: ROS2RobotConfig):
+    def __init__(self, config: Ros2RobotConfig):
         """
         
         """
@@ -243,71 +243,6 @@ class ROS2RobotInterface:
         }
         return rgbd_data
 
-    def get_camera_info(self, topic_name: str = "camera_rgbd") -> dict[str, tuple] | None:
-        """
-        返回RGB 和 Depth参数 (height, width, channels)
-
-        """
-        rgbd = self.get_rgbd_data(topic_name)
-        if rgbd is None:
-            return None
-
-        # RGB
-        rgb_height = rgbd["rgb_image"]["height"]
-        rgb_width = rgbd["rgb_image"]["width"]
-        rgb_channels = 3
-
-        # Depth
-        depth_height = rgbd["depth_image"]["height"]
-        depth_width = rgbd["depth_image"]["width"]
-        depth_channels = 1  # 单通道深度图
-
-        return {
-            f"rgb_image": (rgb_height, rgb_width, rgb_channels),
-            f"depth_image": (depth_height, depth_width, depth_channels)
-        }
-
-
-
-    def get_image(self, topic_name: str = "image") -> Dict[str, Any] | None:
-        """
-        获取图像数据
-        """
-        with self._cache_lock:
-            msg = self._latest_msgs.get(topic_name)
-        if msg is None:
-            return None
-        
-        image_data = {
-            "header": {
-                "stamp": {
-                    "sec": msg.header.stamp.sec,
-                    "nanosec": msg.header.stamp.nanosec,
-                },
-                "frame_id": msg.header.frame_id,
-            },
-            "height": msg.height,
-            "width": msg.width,
-            "encoding": msg.encoding,
-            "is_bigendian": msg.is_bigendian,
-            "step": msg.step,
-            "data": np.frombuffer(msg.data, dtype=np.uint8).reshape((msg.height, msg.width, 3)) if msg.encoding == "rgb8" else (
-                np.frombuffer(msg.data, dtype=np.uint16).reshape((msg.height, msg.width)) if msg.encoding == "16UC1" else msg.data
-            ),
-        }
-        return image_data
-
-    def get_rgb_image(self, topic_name: str = "rgb_image") -> Dict[str, Any] | None:
-        """
-        获取RGB图像数据
-        """
-        return self.get_image(topic_name)
-
-    def get_depth_image(self, topic_name: str = "depth_image") -> Dict[str, Any] | None:
-        """
-        获取深度图像数据
-        """
-        return self.get_image(topic_name)
 
 
     def send_joint_commands(self, commands: Dict[str, float]) -> None:

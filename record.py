@@ -32,7 +32,7 @@ from lerobot.utils.control_utils import init_keyboard_listener
 from lerobot.utils.utils import log_say
 from lerobot.utils.visualization_utils import init_rerun
 
-from lerobot_ros2.openarm.ROS2RobotConfig import ROS2RobotConfig
+from lerobot_ros2.openarm.Ros2RobotConfig import Ros2RobotConfig
 from lerobot_ros2.openarm.ROS2Robot import ROS2Robot
 
 NUM_EPISODES = 2
@@ -44,7 +44,7 @@ HF_REPO_ID = "<hf_username>/<dataset_repo_id>"
 
 
 def main():
-    config = ROS2RobotConfig(
+    config = Ros2RobotConfig(
         robot_name="my_robot",
         joints={
             "left_forward_position_controller": ["openarm_left_joint1", "openarm_left_joint2", "openarm_left_joint3", "openarm_left_joint4", "openarm_left_joint5", "openarm_left_joint6", "openarm_left_joint7"],
