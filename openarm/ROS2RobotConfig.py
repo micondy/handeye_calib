@@ -23,6 +23,18 @@ class ROS2RobotConfig(RobotConfig):
             "joint_states": {
                 "topic": "/joint_states",
                 "type": "sensor_msgs/msg/JointState",
+            },
+            "camera_rgbd": {
+                "topic": "/camera/camera/rgbd",
+                "type": "realsense2_camera_msgs/msg/RGBD",
+            },
+            "rgb_image": {
+                "topic": "/camera/camera/color/image_raw",
+                "type": "sensor_msgs/msg/Image",
+            },
+            "depth_image": {
+                "topic": "/camera/camera/aligned_depth_to_color/image_raw",
+                "type": "sensor_msgs/msg/Image",
             }
 
     """

@@ -10,8 +10,8 @@ from lerobot.utils.errors import DeviceNotConnectedError, DeviceAlreadyConnected
 from lerobot.robots import Robot
 from lerobot.robots.utils import ensure_safe_goal_position
 
-from .ros_interface import ROS2RobotInterface
-from .config import ROS2RobotConfig
+from .ROS2RobotInterface import ROS2RobotInterface
+from .ROS2RobotConfig import ROS2RobotConfig
 
 logger = logging.getLogger(__name__)
 
@@ -32,24 +32,41 @@ class ROS2Robot(Robot):
         for lst in (config.joints or {}).values():
             self._joints.extend(lst)
 
-        # 设置摄像头
-        self.cameras = make_cameras_from_configs(config.cameras)
+        # 设置摄像头,其实是没有摄像头的，从ros2接口获取图像，rgbd只是个名字
+        self.cameras = ["camera_rgbd"]
 
     @property
     def _joints_ft(self) -> Dict[str, type]:
         return {f"{j}.pos": float for j in self._joints}
 
     @property
-    def _cameras_ft(self) -> Dict[str, tuple]:
-        return {cam: (self.config.cameras[cam].height, self.config.cameras[cam].width, 3) for cam in self.cameras}
+    def _cameras_ft(self) -> dict[str, dict]:
+        """
+        返回摄像头特征信息，用于 pipeline / dataset
+        每个特征都是 dict，包含 dtype 和 shape
+        """
+        camera_info = {}
+        for cam_name in self.cameras:
+            info = self._ros2_interface.get_camera_info(cam_name)
+            if info is not None:
+                # info: {"rgb": (h,w,c), "depth": (h,w,c)}
+                for key, shape in info.items():
+                    camera_info[key] = {"dtype": "image", "shape": shape}
+        return camera_info
+
 
     @cached_property
-    def observation_features(self) -> dict[str, type | tuple]:
-        features: dict[str, type | tuple] = {}
+    def observation_features(self) -> dict[str, dict]:
+        """
+        返回完整的观测特征字典，包含关节状态和摄像头信息
+        """
+        features: dict[str, dict] = {}
+        # 关节状态
         for j in self._joints:
-            features[f"{j}.pos"] = float
-            features[f"{j}.vel"] = float
-            features[f"{j}.eff"] = float
+            features[f"{j}.pos"] = {"dtype": "float", "shape": (1,)}
+            features[f"{j}.vel"] = {"dtype": "float", "shape": (1,)}
+            features[f"{j}.eff"] = {"dtype": "float", "shape": (1,)}
+        # 摄像头
         features.update(self._cameras_ft)
         return features
 
