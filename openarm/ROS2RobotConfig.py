@@ -5,7 +5,7 @@ from lerobot.robots import RobotConfig
 
 @RobotConfig.register_subclass("lerobot_ros2_openarm")
 @dataclass
-class ROS2RobotConfig(RobotConfig):
+class Ros2RobotConfig(RobotConfig):
     """
     """
 
@@ -13,13 +13,14 @@ class ROS2RobotConfig(RobotConfig):
     
     namespace: str    = field(default="")  
 
-
     joints: dict[str,list] = field(default_factory=dict)
     """ 
+    左右臂关节列表
     "left_forward_position_controller": ["joint1","joint2"...] 
     """
     topics_to_subscribe: dict[str, dict] = field(default_factory=dict)
     """
+    要订阅的主题列表 
             "joint_states": {
                 "topic": "/joint_states",
                 "type": "sensor_msgs/msg/JointState",
@@ -40,6 +41,7 @@ class ROS2RobotConfig(RobotConfig):
     """
     topics_to_publish: dict[str, dict] = field(default_factory=dict)
     """
+    要发布的主题列表
             "left_forward_position_controller": {
                 "topic": "/left_forward_position_controller/commands",
                 "type": "std_msgs/msg/Float64MultiArray",
