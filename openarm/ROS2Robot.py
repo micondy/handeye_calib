@@ -42,17 +42,26 @@ class ROS2Robot(Robot):
     @property
     def _cameras_ft(self) -> dict[str, dict]:
         """
-        返回摄像头特征信息，用于 pipeline / dataset
-        每个特征都是 dict，包含 dtype 和 shape
+        Camera feature definitions for LeRobot dataset / pipeline.
         """
-        camera_info = {}
-        for cam_name in self.cameras:
-            info = self._ros2_interface.get_camera_info(cam_name)
-            if info is not None:
-                # info: {"rgb": (h,w,c), "depth": (h,w,c)}
-                for key, shape in info.items():
-                    camera_info[key] = {"dtype": "image", "shape": shape}
-        return camera_info
+        info: dict[str, dict] = {}
+
+        # RGB image
+        info["rgb_image"] = {
+            "dtype": "video",          # 🚨 关键
+            "shape": [480, 640, 3],    # HWC
+            "fps": 30,
+        }
+
+        # Depth image
+        info["depth_image"] = {
+            "dtype": "video",          # 🚨 关键
+            "shape": [480, 640, 1],    # 单通道
+            "fps": 30,
+        }
+
+        return info
+
 
 
     @cached_property
@@ -113,7 +122,8 @@ class ROS2Robot(Robot):
         joint_state = self._ros2_interface.get_joint_state()
         if joint_state:
             obs.update(joint_state)
-
+        obs["rgb_image"] =self._ros2_interface.get_rgb_image()["data"]
+        obs["depth_image"] =self._ros2_interface.get_depth_image()["data"]
         # 获取摄像头图像，暂无
         # for cam_key, cam in self.cameras.items():
         #     start = time.perf_counter()

@@ -1,116 +1,134 @@
-# !/usr/bin/env python
+#!/usr/bin/env python
 
-# Copyright 2025 The HuggingFace Inc. team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-
-from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
+from lerobot.configs.types import PipelineFeatureType
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
-from lerobot.datasets.pipeline_features import aggregate_pipeline_dataset_features, create_initial_features
-from lerobot.datasets.utils import combine_feature_dicts
-from lerobot.model.kinematics import RobotKinematics
-from lerobot.processor import RobotAction, RobotObservation, RobotProcessorPipeline
-from lerobot.processor.converters import (
-    observation_to_transition,
-    robot_action_observation_to_transition,
-    transition_to_observation,
-    transition_to_robot_action,
-)
+from lerobot.datasets.pipeline_features import create_initial_features
+from lerobot.processor import RobotObservation
 from lerobot.scripts.lerobot_record import record_loop
 from lerobot.utils.control_utils import init_keyboard_listener
-from lerobot.utils.utils import log_say
 from lerobot.utils.visualization_utils import init_rerun
+from lerobot.utils.utils import log_say
+import cv2
+import numpy as np
 
 from lerobot_ros2.openarm.ROS2RobotConfig import ROS2RobotConfig
 from lerobot_ros2.openarm.ROS2Robot import ROS2Robot
-
+from lerobot.datasets.pipeline_features import create_initial_features
+from lerobot.configs.types import PipelineFeatureType
+from lerobot.datasets.pipeline_features import PipelineFeatureType
+from lerobot.datasets.features import FeatureType
 NUM_EPISODES = 2
 FPS = 30
 EPISODE_TIME_SEC = 60
-RESET_TIME_SEC = 30
-TASK_DESCRIPTION = "My task description"
+RESET_TIME_SEC = 10
+TASK_DESCRIPTION = "moveit_execution"
 HF_REPO_ID = "<hf_username>/<dataset_repo_id>"
 
-
 def main():
+    # -----------------------
+    # ROS2 Robot Config
+    # -----------------------
     config = ROS2RobotConfig(
         robot_name="my_robot",
         joints={
-            "left_forward_position_controller": ["openarm_left_joint1", "openarm_left_joint2", "openarm_left_joint3", "openarm_left_joint4", "openarm_left_joint5", "openarm_left_joint6", "openarm_left_joint7"],
-            "right_forward_position_controller": ["openarm_right_joint1", "openarm_right_joint2", "openarm_right_joint3", "openarm_right_joint4", "openarm_right_joint5", "openarm_right_joint6", "openarm_right_joint7"]
+            "left_arm": [
+                "openarm_left_joint1",
+                "openarm_left_joint2",
+                "openarm_left_joint3",
+                "openarm_left_joint4",
+                "openarm_left_joint5",
+                "openarm_left_joint6",
+                "openarm_left_joint7",
+            ],
+            "right_arm": [
+                "openarm_right_joint1",
+                "openarm_right_joint2",
+                "openarm_right_joint3",
+                "openarm_right_joint4",
+                "openarm_right_joint5",
+                "openarm_right_joint6",
+                "openarm_right_joint7",
+            ],
         },
         topics_to_subscribe={
             "joint_states": {
                 "topic": "/joint_states",
                 "type": "sensor_msgs/msg/JointState",
             },
-            "camera_rgbd":{
-                "topic":"/camera/camera/rgbd",
-                "type": "realsense2_camera_msgs/msg/RGBD",
-            },
-            "rgb_image":{
-                "topic":"/camera/camera/color/image_raw",
+            "rgb_image": {
+                "topic": "/camera/camera/color/image_raw",
                 "type": "sensor_msgs/msg/Image",
             },
-            "depth_image":{
-                "topic":"/camera/camera/aligned_depth_to_color/image_raw",
+            "depth_image": {
+                "topic": "/camera/camera/aligned_depth_to_color/image_raw",
                 "type": "sensor_msgs/msg/Image",
             },
         },
-        topics_to_publish={
-            "left_forward_position_controller": {
-                "topic": "/left_forward_position_controller/commands",
-                "type": "std_msgs/msg/Float64MultiArray",
-            },
-            "right_forward_position_controller": {
-                "topic": "/right_forward_position_controller/commands",
-                "type": "std_msgs/msg/Float64MultiArray",
-            },
-        }
+        topics_to_publish={},  # ❗record-only，不发布控制
     )
 
     robot = ROS2Robot(config)
+    robot.connect()
+    # while True:
+    #     obs1 = robot.get_observation()
+    #     if obs1 is None:
+    #         continue
+    #     rgb_image = obs1["rgb_image"]
+    #     bgr = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
 
+    #     depth_image = obs1["depth_image"]
+    #     depth_m = depth_image.astype(np.float32) / 1000.0
+    #     # 限制最大显示深度（例如 3 米）
+    #     max_depth = 3.0
+    #     depth_m = np.clip(depth_m, 0.0, max_depth)
 
-    # Create the dataset (直接用关节状态)
+    #     # 归一化到 0–255
+    #     depth_norm = (depth_m / max_depth * 255.0).astype(np.uint8)
+
+    #     # 伪彩色
+    #     depth_color = cv2.applyColorMap(depth_norm, cv2.COLORMAP_JET)
+
+    #     cv2.imshow("RGB", bgr)
+    #     cv2.imshow("Depth", depth_color)
+    #     cv2.waitKey(1)
+    # -----------------------
+    # Dataset
+    # -----------------------
+    # 生成初始 feature schema
+    # Flatten features dict: merge action and observation features into a single dict
+    observation_features = {
+        "rgb_image": {
+            "pipeline_type": PipelineFeatureType.OBSERVATION,
+            "feature_type": FeatureType.IMAGE,
+        },
+        "depth_image": {
+            "pipeline_type": PipelineFeatureType.OBSERVATION,
+            "feature_type": FeatureType.DEPTH,
+        },
+    }
+
     dataset = LeRobotDataset.create(
         repo_id=HF_REPO_ID,
         fps=FPS,
-        features=robot.observation_features,
         robot_type=robot.name,
-        use_videos=True,  # 如果你还想存视频
-        image_writer_threads=4,
+        features=observation_features,
+        use_videos=True,
     )
+  
 
 
-    # Connect the robot and teleoperator
-    robot.connect()
-
-
-    # Initialize the keyboard listener and rerun visualization
+    # -----------------------
+    # UI / Keyboard / Viz
+    # -----------------------
     listener, events = init_keyboard_listener()
-    init_rerun(session_name="recording_phone")
+    init_rerun(session_name="moveit_record")
 
-    if not robot.is_connected:
-        raise ValueError("Robot is not connected!")
+    log_say("Start recording")
 
-    print("Starting record loop...")
     episode_idx = 0
     while episode_idx < NUM_EPISODES and not events["stop_recording"]:
-        log_say(f"Recording episode {episode_idx + 1} of {NUM_EPISODES}")
+        log_say(f"Recording episode {episode_idx}")
 
-        # Main record loop
         record_loop(
             robot=robot,
             events=events,
@@ -119,37 +137,22 @@ def main():
             control_time_s=EPISODE_TIME_SEC,
             single_task=TASK_DESCRIPTION,
             display_data=True,
+            robot_action_processor=None,       # ❗不记录 action
+            teleop_action_processor=None,      # ❗不记录 action
         )
 
-        # Reset the environment if not stopping or re-recording
-        if not events["stop_recording"] and (episode_idx < NUM_EPISODES - 1 or events["rerecord_episode"]):
-            log_say("Reset the environment")
-            record_loop(
-                robot=robot,
-                events=events,
-                fps=FPS,
-
-                control_time_s=RESET_TIME_SEC,
-                single_task=TASK_DESCRIPTION,
-                display_data=True,
-            )
-
         if events["rerecord_episode"]:
-            log_say("Re-recording episode")
+            log_say("Re-record episode")
             events["rerecord_episode"] = False
-            events["exit_early"] = False
             dataset.clear_episode_buffer()
             continue
 
-        # Save episode
         dataset.save_episode()
         episode_idx += 1
 
-    # Clean up
-    log_say("Stop recording")
-    robot.disconnect()
-
+    log_say("Finish recording")
     listener.stop()
+    robot.disconnect()
 
     dataset.finalize()
     dataset.push_to_hub()

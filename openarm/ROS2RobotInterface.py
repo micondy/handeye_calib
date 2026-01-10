@@ -243,29 +243,7 @@ class ROS2RobotInterface:
         }
         return rgbd_data
 
-    def get_camera_info(self, topic_name: str = "camera_rgbd") -> dict[str, tuple] | None:
-        """
-        返回RGB 和 Depth参数 (height, width, channels)
 
-        """
-        rgbd = self.get_rgbd_data(topic_name)
-        if rgbd is None:
-            return None
-
-        # RGB
-        rgb_height = rgbd["rgb_image"]["height"]
-        rgb_width = rgbd["rgb_image"]["width"]
-        rgb_channels = 3
-
-        # Depth
-        depth_height = rgbd["depth_image"]["height"]
-        depth_width = rgbd["depth_image"]["width"]
-        depth_channels = 1  # 单通道深度图
-
-        return {
-            f"rgb_image": (rgb_height, rgb_width, rgb_channels),
-            f"depth_image": (depth_height, depth_width, depth_channels)
-        }
 
 
 
