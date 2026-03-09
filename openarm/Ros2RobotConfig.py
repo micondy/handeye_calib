@@ -6,8 +6,6 @@ from lerobot.robots import RobotConfig
 @RobotConfig.register_subclass("lerobot_ros2_openarm")
 @dataclass
 class Ros2RobotConfig(RobotConfig):
-    """
-    """
 
     robot_name: str   = field(default="lerobot_ros2_openarm")# 会创建一个 lerobot_ros2_openarm_node 作为节点名称
     
@@ -15,9 +13,10 @@ class Ros2RobotConfig(RobotConfig):
 
     joints: dict[str,list] = field(default_factory=dict)
     """ 
-    左右臂关节列表
+    机器人的关节列表, 例如:
     "left_forward_position_controller": ["joint1","joint2"...] 
     """
+
     topics_to_subscribe: dict[str, dict] = field(default_factory=dict)
     """
     要订阅的主题列表 

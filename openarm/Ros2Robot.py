@@ -10,22 +10,22 @@ from lerobot.utils.errors import DeviceNotConnectedError, DeviceAlreadyConnected
 from lerobot.robots import Robot
 from lerobot.robots.utils import ensure_safe_goal_position
 
-from .ROS2RobotInterface import ROS2RobotInterface
-from .ROS2RobotConfig import ROS2RobotConfig
+from .Ros2RobotInterface import Ros2RobotInterface
+from .Ros2RobotConfig import Ros2RobotConfig
 
 logger = logging.getLogger(__name__)
 
 
-class ROS2Robot(Robot):
+class Ros2Robot(Robot):
 
     name = "ros2_robot"
-    config_class = ROS2RobotConfig
+    config_class = Ros2RobotConfig
 
-    def __init__(self, config: ROS2RobotConfig):
+    def __init__(self, config: Ros2RobotConfig):
         super().__init__(config)
         self.config = config
 
-        self._ros2_interface = ROS2RobotInterface(config)
+        self._ros2_interface = Ros2RobotInterface(config)
 
         # 根据config设置关节
         self._joints = []
@@ -33,7 +33,6 @@ class ROS2Robot(Robot):
             self._joints.extend(lst)
 
         # 设置摄像头,其实是没有摄像头的，从ros2接口获取图像，rgbd只是个名字
-        self.cameras = ["camera_rgbd"]
 
     @property
     def _joints_ft(self) -> Dict[str, type]:
@@ -48,14 +47,14 @@ class ROS2Robot(Robot):
 
         # RGB image
         info["rgb_image"] = {
-            "dtype": "video",          # 🚨 关键
+            "dtype": "video",          
             "shape": [480, 640, 3],    # HWC
             "fps": 30,
         }
 
         # Depth image
         info["depth_image"] = {
-            "dtype": "video",          # 🚨 关键
+            "dtype": "video",         
             "shape": [480, 640, 1],    # 单通道
             "fps": 30,
         }
@@ -152,7 +151,7 @@ class ROS2Robot(Robot):
         #     goal_present = {j: (g, present_pos.get(j, 0.0)) for j, g in goal_pos.items()}
         #     goal_pos = ensure_safe_goal_position(goal_present, self.config.max_relative_target)
 
-        # Build command dict expected by ROS2RobotInterface: keys are 'joint.pos'
+        # Build command dict expected by Ros2RobotInterface: keys are 'joint.pos'
         commands = {f"{j}.pos": p for j, p in goal_pos.items()}
         self._ros2_interface.send_joint_commands(commands)
 

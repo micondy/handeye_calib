@@ -11,8 +11,8 @@ from lerobot.utils.utils import log_say
 import cv2
 import numpy as np
 
-from lerobot_ros2.openarm.ROS2RobotConfig import ROS2RobotConfig
-from lerobot_ros2.openarm.ROS2Robot import ROS2Robot
+from lerobot_ros2.openarm.Ros2RobotConfig import ROS2RobotConfig
+from lerobot_ros2.openarm.Ros2Robot import ROS2Robot
 from lerobot.datasets.pipeline_features import create_initial_features
 from lerobot.configs.types import PipelineFeatureType
 from lerobot.datasets.pipeline_features import PipelineFeatureType

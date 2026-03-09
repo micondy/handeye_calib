@@ -3,8 +3,8 @@
 import torch
 
 
-from lerobot_ros2.config import Ros2RobotConfig
-from lerobot_ros2.openarm import ROS2Robot
+from .Ros2RobotConfig import Ros2RobotConfig
+from lerobot_ros2.openarm import Ros2Robot
 import time
 import logging
 

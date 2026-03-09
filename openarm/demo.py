@@ -1,14 +1,115 @@
 from .Ros2RobotConfig import Ros2RobotConfig
-from .ROS2RobotInterface import ROS2RobotInterface
+from .Ros2RobotInterface import Ros2RobotInterface
 import time
+import os
 import logging
+import json
+from pynput import keyboard
 import copy
 import random
 logging.basicConfig(level=logging.INFO)
 
 import cv2
 import numpy as np
+
+# 全局变量
+ros2_robot_interface = None
+
+link_names = [
+    'openarm_body_link0',
+    'openarm_left_hand',
+    'openarm_left_hand_tcp',
+    'openarm_left_left_finger',
+    'openarm_left_link0',
+    'openarm_left_link1',
+    'openarm_left_link2',
+    'openarm_left_link3',
+    'openarm_left_link4',
+    'openarm_left_link5',
+    'openarm_left_link6',
+    'openarm_left_link7',
+    'openarm_left_right_finger',
+    'openarm_right_hand',
+    'openarm_right_hand_tcp',
+    'openarm_right_left_finger',
+    'openarm_right_link0',
+    'openarm_right_link1',
+    'openarm_right_link2',
+    'openarm_right_link3',
+    'openarm_right_link4',
+    'openarm_right_link5',
+    'openarm_right_link6',
+    'openarm_right_link7',
+    'openarm_right_right_finger',
+    'world'
+]
+
+def on_press(key):
+    if key == keyboard.Key.space:
+        capture()
+
+# 标定数据
+count = 0
+data_dir = "/home/scc/calibration_data"
+os.makedirs(data_dir, exist_ok=True)
+poses = []
+preview_scale = 0.75
+
+def capture():
+    global count, poses, ros2_robot_interface
+    # 获取 RGB 图像
+    rgbd = ros2_robot_interface.get_rgbd_data()
+    if rgbd is None:
+        print("未获取到RGBD数据，跳过本次采样")
+        return
+
+    rgb_image = rgbd["rgb_image"]["data"]
+    image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
+
+    # 与本次RGBD图像同时间戳的TF查询（统一采样入口）
+    image_stamp = rgbd["rgb_image"]["header"]["stamp"]
+  
+    # 保存图片
+    filename = f"{count}.jpg"
+    filepath = os.path.join(data_dir, filename)
+    cv2.imwrite(filepath, image)
+    
+    # 获取所有 link 的 pose
+    current_poses = {}
+    for link in link_names:
+        pose = ros2_robot_interface.get_link_pose(
+            link_name=link,
+            reference_frame='world',
+            stamp=image_stamp,
+            max_time_diff=0.08,
+        )
+        if pose is not None:
+            pos = pose['position']
+            quat = pose['orientation']
+            current_poses[link] = {
+                "position": pos.tolist(),
+                "orientation": quat.tolist()
+            }
+        else:
+            current_poses[link] = None
+    
+    # 保存到 poses
+    poses.append({
+        "image": filename,
+        "image_stamp": image_stamp,
+        "poses": current_poses
+    })
+    
+    # 保存 json
+    with open(os.path.join(data_dir, "poses.json"), "w") as f:
+        json.dump(poses, f, indent=4)
+    
+    print(f"已保存图像 {filename} 和所有 link 的坐标到 poses.json，计数: {count}")
+    count += 1
+
 def main():
+    global ros2_robot_interface
+    enable_visualization = bool(os.environ.get("DISPLAY"))
     config = Ros2RobotConfig(
         robot_name="my_robot",
         joints={
@@ -43,71 +144,52 @@ def main():
                 "type": "std_msgs/msg/Float64MultiArray",
             },
         },
-        cameras={
-            "camera_rgb":{
-                "height":480,
-                "width":640,
-                "channels":3,       
-            },
-            "camera_depth":{
-                "height":480,
-                "width":640,
-                "channels":1,
-            },
-        }
     )
-    ros2_robot_interface = ROS2RobotInterface(config)
+    ros2_robot_interface = Ros2RobotInterface(config)
     ros2_robot_interface.connect()
-        # 阻塞，保持节点运行
-  
+    
+    # 启动键盘监听，按空格键捕获
+    listener = keyboard.Listener(on_press=on_press)
+    listener.start()
+    
     try:
+
         while True:
-            time.sleep(0.1)
-            # # 获取当前关节状态
-            # dict1 = ros2_robot_interface.get_joint_state()
-            # #print(dict1)
-            # if dict1 is None:
-            #     continue
-            # # 生成新的命令字典（随机扰动 ±0.1）
-            # cmd_dict = copy.deepcopy(dict1)
-            # for joint_key, val in cmd_dict.items():
-            #     if joint_key.endswith(".pos"):
-            #         cmd_dict[joint_key] = val + random.uniform(-0.1, 0.1)
-            # #print(cmd_dict)
-            # # 发送命令
-            # ros2_robot_interface.send_joint_commands(cmd_dict)
-                # dict_rgb = ros2_robot_interface.get_rgb_image()
-                # if dict_rgb is None:
-                #     continue
+            now = time.time()
 
-                # dict_depth = ros2_robot_interface.get_depth_image()
-                # if dict_depth is None:
-                #     continue
+            # 获取并显示图像
             rgbd = ros2_robot_interface.get_rgbd_data()
-            if rgbd is None:
-                continue
-            rgb_image = rgbd["rgb_image"]["data"]
-            bgr = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
+            if rgbd is not None:
+                rgb_image = rgbd["rgb_image"]["data"]
+                bgr = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
 
-            depth_image = rgbd["depth_image"]["data"]
-            depth_m = depth_image.astype(np.float32) / 1000.0
-            # 限制最大显示深度（例如 3 米）
-            max_depth = 3.0
-            depth_m = np.clip(depth_m, 0.0, max_depth)
+                depth_image = rgbd["depth_image"]["data"]
+                depth_m = depth_image.astype(np.float32) / 1000.0
+                # 限制最大显示深度（例如 3 米）
+                max_depth = 3.0
+                depth_m = np.clip(depth_m, 0.0, max_depth)
 
-            # 归一化到 0–255
-            depth_norm = (depth_m / max_depth * 255.0).astype(np.uint8)
+                # 归一化到 0–255
+                depth_norm = (depth_m / max_depth * 255.0).astype(np.uint8)
 
-            # 伪彩色
-            depth_color = cv2.applyColorMap(depth_norm, cv2.COLORMAP_JET)
+                # 伪彩色
+                depth_color = cv2.applyColorMap(depth_norm, cv2.COLORMAP_JET)
 
-            cv2.imshow("RGB", bgr)
-            cv2.imshow("Depth", depth_color)
-            cv2.waitKey(1)
-            #time.sleep(0.5)
+                if enable_visualization:
+                    try:
+                        cv2.imshow("RGB", bgr)
+                        cv2.imshow("Depth", depth_color)
+                        cv2.waitKey(1)
+                    except cv2.error as e:
+                        logging.warning(f"OpenCV GUI 不可用，已自动关闭图像显示: {e}")
+                        enable_visualization = False
+            else:
+                time.sleep(0.005)
 
             
     except KeyboardInterrupt:
+        listener.stop()
+        cv2.destroyAllWindows()
         ros2_robot_interface.disconnect()
 
 if __name__ == "__main__":
