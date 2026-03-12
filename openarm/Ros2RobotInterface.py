@@ -193,7 +193,11 @@ class Ros2RobotInterface:
         获取指定link在reference_frame下的空间坐标（平移+四元数）
         优先使用 TF2 Buffer.lookup_transform 按时间戳查询。
         如果提供 stamp，则按该时刻查询（秒/纳秒或浮点秒）；未提供则查询最新。
-        返回: {'position': np.array([x,y,z]), 'orientation': np.array([x,y,z,w])}
+        返回: {
+            'position': np.array([x,y,z]),
+            'orientation': np.array([x,y,z,w]),
+            'pose_stamp': {'sec': int, 'nanosec': int},
+        }
         """
         if self._tf_buffer is None:
             logger.warning("TF2 Buffer 未初始化，无法查询 link pose")
@@ -222,9 +226,14 @@ class Ros2RobotInterface:
 
         trans = transform.transform.translation
         rot = transform.transform.rotation
+        pose_stamp = {
+            'sec': int(transform.header.stamp.sec),
+            'nanosec': int(transform.header.stamp.nanosec),
+        }
         return {
             'position': np.array([trans.x, trans.y, trans.z], dtype=np.float64),
             'orientation': np.array([rot.x, rot.y, rot.z, rot.w], dtype=np.float64),
+            'pose_stamp': pose_stamp,
         }
     
     def _generic_callback(self, name: str, msg):

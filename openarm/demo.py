@@ -50,10 +50,20 @@ def on_press(key):
 
 # 标定数据
 count = 0
-data_dir = "/home/scc/calibration_data"
+data_dir = "/home/scc/lerobot/lerobot_ros2/handeye_calib/calibration_data"
 os.makedirs(data_dir, exist_ok=True)
 poses = []
 preview_scale = 0.75
+MAX_POSE_STAMP_DIFF_SEC = 0.08
+
+def _stamp_to_sec(stamp):
+    if not isinstance(stamp, dict):
+        return None
+    sec = stamp.get("sec")
+    nanosec = stamp.get("nanosec")
+    if sec is None or nanosec is None:
+        return None
+    return float(sec) + float(nanosec) * 1e-9
 
 def capture():
     global count, poses, ros2_robot_interface
@@ -67,7 +77,8 @@ def capture():
     image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
 
     # 与本次RGBD图像同时间戳的TF查询（统一采样入口）
-    image_stamp = rgbd["rgb_image"]["header"]["stamp"]
+    tf_stamp = rgbd["rgb_image"]["header"]["stamp"]
+    tf_stamp_sec = _stamp_to_sec(tf_stamp)
   
     # 保存图片
     filename = f"{count}.jpg"
@@ -80,15 +91,26 @@ def capture():
         pose = ros2_robot_interface.get_link_pose(
             link_name=link,
             reference_frame='world',
-            stamp=image_stamp,
+            stamp=tf_stamp,
             max_time_diff=0.08,
         )
         if pose is not None:
             pos = pose['position']
             quat = pose['orientation']
+            pose_stamp = pose.get('pose_stamp')
+            pose_stamp_sec = _stamp_to_sec(pose_stamp)
+            stamp_diff_sec = None
+            if tf_stamp_sec is not None and pose_stamp_sec is not None:
+                stamp_diff_sec = abs(pose_stamp_sec - tf_stamp_sec)
+                if stamp_diff_sec > MAX_POSE_STAMP_DIFF_SEC:
+                    logging.warning(
+                        f"{link} 的 pose_stamp 与 tf_stamp 差值过大: {stamp_diff_sec:.6f}s (> {MAX_POSE_STAMP_DIFF_SEC:.3f}s)"
+                    )
             current_poses[link] = {
                 "position": pos.tolist(),
-                "orientation": quat.tolist()
+                "orientation": quat.tolist(),
+                "pose_stamp": pose_stamp,
+                "stamp_diff_sec": stamp_diff_sec,
             }
         else:
             current_poses[link] = None
@@ -96,7 +118,7 @@ def capture():
     # 保存到 poses
     poses.append({
         "image": filename,
-        "image_stamp": image_stamp,
+        "tf_stamp": tf_stamp,
         "poses": current_poses
     })
     
