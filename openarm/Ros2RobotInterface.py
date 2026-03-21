@@ -13,7 +13,6 @@ import numpy as np
 import rclpy
 from geometry_msgs.msg import Pose, PoseStamped, Twist
 from tf2_ros import Buffer, ConnectivityException, ExtrapolationException, LookupException, TransformListener
-from lerobot.utils.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
 from rclpy.duration import Duration
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
@@ -44,6 +43,14 @@ MSG_TYPE_MAP = {
 from threading import Lock
 
 logger = logging.getLogger(__name__)
+
+
+class DeviceAlreadyConnectedError(RuntimeError):
+    pass
+
+
+class DeviceNotConnectedError(RuntimeError):
+    pass
 
 
 def _transform_to_matrix(trans, rot):

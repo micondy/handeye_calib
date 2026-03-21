@@ -1,11 +1,9 @@
 from dataclasses import dataclass, field
-from lerobot.cameras import CameraConfig
-from lerobot.robots import RobotConfig
+from typing import Any
 
 
-@RobotConfig.register_subclass("lerobot_ros2_openarm")
 @dataclass
-class Ros2RobotConfig(RobotConfig):
+class Ros2RobotConfig:
 
     robot_name: str   = field(default="lerobot_ros2_openarm")# 会创建一个 lerobot_ros2_openarm_node 作为节点名称
     
@@ -47,5 +45,5 @@ class Ros2RobotConfig(RobotConfig):
             },
     """
 
-    cameras: dict[str, CameraConfig] = field(default_factory=dict)
+    cameras: dict[str, Any] = field(default_factory=dict)
 

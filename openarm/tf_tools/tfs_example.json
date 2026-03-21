@@ -1,0 +1,19 @@
+{
+  "transforms": [
+    {
+      "parent_frame": "world",
+      "child_frame": "camera_depth_optical_frame",
+      "translation": {
+        "x": 0.32034904,
+        "y": 0.05333502,
+        "z": 0.73377816
+      },
+      "rotation": {
+        "x": -0.70317699,
+        "y": 0.71050360,
+        "z": -0.01751946,
+        "w": -0.02048948
+      }
+    }
+  ]
+}
