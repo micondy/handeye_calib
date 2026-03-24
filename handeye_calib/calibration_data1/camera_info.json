@@ -2,8 +2,8 @@
     "rgb_camera_info": {
         "header": {
             "stamp": {
-                "sec": 1774233414,
-                "nanosec": 313589111
+                "sec": 1773883076,
+                "nanosec": 680022705
             },
             "frame_id": "camera_color_optical_frame"
         },
