@@ -369,7 +369,7 @@ class HandEyeCalibration:
         self.pnp_reproj_errors.clear()
         print("已清空所有样本")
 
-    def load_from_folder(self, folder_path, pose_file='poses.json', robot_pose_key='openarm_left_hand_tcp'):
+    def load_from_folder(self, folder_path, pose_file='poses.json', robot_pose_key='openarm_right_hand'):
         """
         从文件夹批量加载图片和位姿数据
         
@@ -584,17 +584,17 @@ def generate_chessboard(board_size=(9, 6), square_size_mm=24, output_file='chess
 if __name__ == '__main__':
     
     #generate_chessboard(board_size=(11, 8), square_size_mm=10, output_file='calibration_chessboard.png')
-    #1. 创建标定器
+    #1. 创建标定器  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     calibrator = HandEyeCalibration(
-        board_size=(11, 8),  # 内角点数量 (列, 行)，对应棋盘格的格子数 -1
-        square_size=0.01  # 10mm
+        board_size=(9, 6),  # 内角点数量 (列, 行)，对应棋盘格的格子数 -1
+        square_size=0.011  # 11mm
     )
 
-    #2. True: Eye-in-Hand(眼在手上) / False: Eye-to-Hand(眼在手外)
-    eye_in_hand_mode = True
+    #2. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! True: Eye-in-Hand(眼在手上) / False: Eye-to-Hand(眼在手外) 
+    eye_in_hand_mode = False
     calibrator.set_eye_mode(eye_in_hand_mode)
 
-    # 3. 仅从文件加载相机内参
+    # 3. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 仅从文件加载相机内参
     camera_info_path = 'calibration_data/camera_info.json'
     data_folder = 'calibration_data'
     if os.path.exists(camera_info_path):
@@ -644,17 +644,19 @@ if __name__ == '__main__':
             break
     cv2.destroyAllWindows()
 
-    # 4. 正式加载数据
+    # 4. 正式加载数据 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     num_samples = calibrator.load_from_folder(
         data_folder,
-        robot_pose_key='openarm_left_hand_tcp'
+        robot_pose_key='openarm_right_hand'
     )
+
+
     if num_samples < 3:
         print(f"\n❌ 样本数不足！至少需要 3 个有效样本，当前只有 {num_samples} 个")
         exit(1)
 
     # 5. 多种方法对比求解
-    methods = ['Tsai1989', 'Horaud1995', 'Andreff1999', 'Daniilidis1998']
+    methods = ['Tsai1989', 'Horaud1995', 'Daniilidis1998', 'Park1994', 'Andreff1999']
     for method in methods:
         print(f"\n{'='*20} {method} {'='*20}")
         R, t = calibrator.solve(method=method)
